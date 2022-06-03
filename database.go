@@ -8,18 +8,18 @@ import (
 
 type Database struct {
 	client *mongo.Client
-	db *mongo.Database
-	users *mongo.Collection
+	db     *mongo.Database
+	users  *mongo.Collection
 }
 
 type RecordId interface{}
 
 func OpenDatabase(uri string) (Database, error) {
 	var (
-		db Database
+		db  Database
 		err error
 	)
-	
+
 	ctx := context.TODO()
 	opts := options.Client().ApplyURI(uri)
 
@@ -40,12 +40,12 @@ func (db Database) Close() error {
 func (db Database) InsertUser(user User) (RecordId, error) {
 	var (
 		result *mongo.InsertOneResult
-		err error
+		err    error
 	)
 
 	user.Password = ""
-	
-	result, err =  db.users.InsertOne(context.TODO(), user)
-	
+
+	result, err = db.users.InsertOne(context.TODO(), user)
+
 	return result.InsertedID, err
 }
