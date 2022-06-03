@@ -9,14 +9,14 @@ const (
 	SALT_SIZE  int = 16
 	SCRYPT_N   int = 32768
 	SCRYPT_r   int = 8
-	SCRYPT_P   int = 1
+	SCRYPT_p   int = 1
 	PHASH_SIZE int = 32
 )
 
 func SaltAndHash(password string) (salt []byte, hash []byte, err error) {
-	salt = make([]byte, 16)
+	salt = make([]byte, SALT_SIZE)
 	if _, err = rand.Read(salt); err == nil {
-		hash, err = scrypt.Key([]byte(password), salt, 32768, 8, 1, 32)
+		hash, err = scrypt.Key([]byte(password), salt, SCRYPT_N, SCRYPT_r, SCRYPT_p, PHASH_SIZE)
 	}
 	return
 }
