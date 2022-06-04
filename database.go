@@ -2,8 +2,15 @@ package main
 
 import (
 	"context"
+	"errors"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+)
+
+var (
+	ErrNoModifications error = errors.New("No records were modified")
+	ErrMissingField    error = errors.New("A required field is missing")
 )
 
 type Database struct {
@@ -40,12 +47,39 @@ func (db Database) Close() error {
 func (db Database) InsertUser(user User) (RecordId, error) {
 	var (
 		result *mongo.InsertOneResult
+		id     RecordId
 		err    error
 	)
 
 	user.Password = ""
 
-	result, err = db.users.InsertOne(context.TODO(), user)
+	if result, err = db.users.InsertOne(context.TODO(), user); err == nil {
+		id = result.InsertedID
+	}
 
-	return result.InsertedID, err
+	return id, err
+}
+
+func (db Database) UpdateChallenge(user User) (RecordId, error) {
+	var (
+		result *mongo.UpdateResult
+		id     RecordId
+		err    error
+	)
+
+	if user.Challenge == nil {
+		return id, ErrMissingField
+	}
+
+	filter := bson.M{"name": user.Name}
+	update := bson.D{{"$set", bson.M{"challenge": user.Challenge}}}
+
+	if result, err = db.users.UpdateOne(context.TODO(), filter, update); err == nil {
+		id = result.UpsertedID
+		if result.ModifiedCount < 1 {
+			err = ErrNoModifications
+		}
+	}
+
+	return id, err
 }

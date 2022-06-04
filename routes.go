@@ -15,6 +15,8 @@ func router() http.Handler {
 	router.Use(render.SetContentType(render.ContentTypeJSON))
 
 	router.Post("/register", handleRegister)
+	router.Get("/login", handleLoginChallenge)
+	router.Post("/login", handleLogin)
 
 	return router
 }
@@ -46,4 +48,29 @@ func handleRegister(res http.ResponseWriter, req *http.Request) {
 	}
 
 	res.WriteHeader(200)
+}
+
+func handleLoginChallenge(res http.ResponseWriter, req *http.Request) {
+	var (
+		user User
+		err  error
+	)
+
+	if err = render.DecodeJSON(req.Body, &user); err == nil {
+		if user.Challenge, err = NewChallenge(); err == nil {
+			_, err = db.UpdateChallenge(user)
+		}
+	}
+
+	if err != nil {
+		log.Println("Failed to set challenge:", err)
+		res.WriteHeader(500)
+		return
+	}
+
+	render.JSON(res, req, &user)
+}
+
+func handleLogin(res http.ResponseWriter, req *http.Request) {
+	res.WriteHeader(501)
 }

@@ -35,11 +35,11 @@ func main() {
 
 	address = fmt.Sprintf(":%s", port)
 
-	server := server(address)
+	server := Server(address)
 	server.ListenAndServe()
 }
 
-func server(address string) http.Server {
+func Server(address string) http.Server {
 	return http.Server{
 		Addr:    address,
 		Handler: router(),
