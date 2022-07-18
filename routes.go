@@ -5,6 +5,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
 	"log"
+	"bytes"
 	"net/http"
 )
 
@@ -15,7 +16,6 @@ func router() http.Handler {
 	router.Use(render.SetContentType(render.ContentTypeJSON))
 
 	router.Post("/register", handleRegister)
-	router.Get("/login", handleLoginChallenge)
 	router.Post("/login", handleLogin)
 
 	return router
@@ -50,27 +50,49 @@ func handleRegister(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(200)
 }
 
-func handleLoginChallenge(res http.ResponseWriter, req *http.Request) {
+func handleLogin(res http.ResponseWriter, req *http.Request) {
 	var (
+		response LoginResponse
+		auth bool
+		username string
+		password string
 		user User
-		err  error
+		hash []byte
+		err error
 	)
 
-	if err = render.DecodeJSON(req.Body, &user); err == nil {
-		if user.Challenge, err = NewChallenge(); err == nil {
-			_, err = db.UpdateChallenge(user)
-		}
+	if username, password, auth = req.BasicAuth(); !auth {
+		log.Println("No authorization provided")
+		res.WriteHeader(400)
+		return
 	}
 
+	user, err = db.GetUserByName(username)
 	if err != nil {
-		log.Println("Failed to set challenge:", err)
+		log.Println("User", username, "not found.", err.Error())
+		res.WriteHeader(401)
+		return
+	}
+		
+	hash, err = HashPassword(password, user.Salt)
+	if err != nil {
+		log.Println("Failed to hash password")
+		res.WriteHeader(500)
+		return
+	}
+	
+	if bytes.Compare(hash, user.PassHash) != 0 {
+		log.Println("Invalid login")
+		res.WriteHeader(401)
+		return
+	}
+	
+	response.Token, err = NewToken(user)
+	if err != nil {
+		log.Println("Failed to generate token")
 		res.WriteHeader(500)
 		return
 	}
 
-	render.JSON(res, req, &user)
-}
-
-func handleLogin(res http.ResponseWriter, req *http.Request) {
-	res.WriteHeader(501)
+	render.JSON(res, req, response)
 }

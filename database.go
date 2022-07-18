@@ -83,3 +83,9 @@ func (db Database) UpdateChallenge(user User) (RecordId, error) {
 
 	return id, err
 }
+
+func (db Database) GetUserByName(name string) (user User, err error) {
+	result := db.users.FindOne(context.TODO(), bson.M{"name": name})
+	err = result.Decode(&user)
+	return
+}
